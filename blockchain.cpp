@@ -1,3 +1,4 @@
+#include <stringstream>
 #include <condition_variable>
 #include <future>
 #include "blockchain.h"
@@ -124,12 +125,26 @@ void blockchain::print(vector<Block> &blockchain) {
 	cout << result.dump(8) << endl;
 
 }
+stringstream blockchain::dumpChainAsJson() {
+	json result;
+	stringstream chainJSON;
+	for (auto x : chain) {
+		result["index"] = x.index;
+		result["data"] = x.data;
+		result["difficulty"] = x.difficulty;
+		result["nonce"] = x.nonce;
+		result["timestamp"] = x.timestamp;
+		result["hash"] = x.hash;
+		result["prevhash"] = x.prev_hash;
+		chainJSON << result.dump(8) << endl;
+	}
+	return chainJSON;
+}
 void blockchain::handleWriteBlock(string data) {
 	difficulty = chain[chain.size() - 1].difficulty;
 	range.clear();
 	Block new_block = generate_block(chain[chain.size() - 1], data);
-	chain.push_back(new_block);
-	if (is_block_valid(new_block, chain[chain.size() - 2])) {
+	if (is_block_valid(new_block, chain[chain.size() - 1])) {
 		vector<Block> new_blockchain(chain);
 		new_blockchain.push_back(new_block);
 		replace_chain(new_blockchain);

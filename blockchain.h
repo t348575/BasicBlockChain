@@ -7,6 +7,7 @@ struct Block {
 class blockchain {
 	public:
 		void handleWriteBlock(string data);
+		stringstream dumpChainAsJson();
 		blockchain(Block &genesis) {
 			chain.push_back(genesis);
 			print(chain);
