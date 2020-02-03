@@ -7,9 +7,7 @@
   
   # Building
    ### Linux
-    ```
-    make
-    ```
+    `make`
     
   # Usage
    `./blockchain [Arguments...]`
