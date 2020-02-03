@@ -17,7 +17,7 @@ public:
 	std::string binary_data, result;
 	int32 k[64] = { 1116352408, 1899447441, 3049323471, 3921009573, 961987163, 1508970993, 2453635748, 2870763221, 3624381080, 310598401, 607225278, 1426881987, 1925078388, 2162078206, 2614888103, 3248222580, 3835390401, 4022224774, 264347078, 604807628, 770255983, 1249150122, 1555081692, 1996064986, 2554220882, 2821834349, 2952996808, 3210313671, 3336571891, 3584528711, 113926993, 338241895, 666307205, 773529912, 1294757372, 1396182291, 1695183700, 1986661051, 2177026350, 2456956037, 2730485921, 2820302411, 3259730800, 3345764771, 3516065817, 3600352804, 4094571909, 275423344, 430227734, 506948616, 659060556, 883997877, 958139571, 1322822218, 1537002063, 1747873779, 1955562222, 2024104815, 2227730452, 2361852424, 2428436474, 2756734187, 3204031479, 3329325298 };
 	int32 hash[8] = { 1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225 };
-	sha256_optimized(string data);
+	sha256(string data);
 	inline uint32_t maj(int32 a, int32 b, int32 c);
 	inline uint32_t ch(int32 a, int32 b, int32 c);
 	inline uint32_t sigma0256(int32 data);
@@ -31,39 +31,39 @@ public:
 	inline uint32_t bin_str_to_int32(std::string data);
 	inline std::string compute(int32 **m, int64 current);
 	inline std::string get_hash();
-	~sha256_optimized();
+	~sha256();
 };
-inline uint32_t sha256_optimized::bin_str_to_int32(std::string data) {
+inline uint32_t sha256::bin_str_to_int32(std::string data) {
 	std::bitset<32> a(data);
 	return a.to_ulong();
 }
-inline uint32_t sha256_optimized::hex_int_to_dec_int(int32 data) {
+inline uint32_t sha256::hex_int_to_dec_int(int32 data) {
 	std::stringstream x;
 	x << std::hex << data;
 	int32 y;
 	x >> y;
 	return y;
 }
-inline int32 sha256_optimized::rotr(int32 data, unsigned m) {
+inline int32 sha256::rotr(int32 data, unsigned m) {
 	data = data >> m | data << (32 - m);
 	return data;
 }
-inline int32 sha256_optimized::shr(int32 data, unsigned m) {
+inline int32 sha256::shr(int32 data, unsigned m) {
 	data >>= m;
 	return data;
 }
-inline uint32_t sha256_optimized::Csigma1256(int32 data) { return (rotr(data, 6) ^ rotr(data, 11) ^ rotr(data, 25)); }
-inline uint32_t sha256_optimized::Csigma0256(int32 data) { return (rotr(data, 2) ^ rotr(data, 13) ^ rotr(data, 22)); }
-inline uint32_t sha256_optimized::sigma1256(int32 data) { return (rotr(data, 17) ^ rotr(data, 19) ^ shr(data, 10)); }
-inline uint32_t sha256_optimized::sigma0256(int32 data) { return (rotr(data, 7) ^ rotr(data, 18) ^ shr(data, 3)); }
-inline uint32_t sha256_optimized::ch(int32 a, int32 b, int32 c) { return (a & b) ^ (~a & c); }
-inline uint32_t sha256_optimized::maj(int32 a, int32 b, int32 c) { return ((a & b) ^ (a & c) ^ (b & c)); }
-inline void sha256_optimized::assignhex(int32& a, int32& b) {
+inline uint32_t sha256::Csigma1256(int32 data) { return (rotr(data, 6) ^ rotr(data, 11) ^ rotr(data, 25)); }
+inline uint32_t sha256::Csigma0256(int32 data) { return (rotr(data, 2) ^ rotr(data, 13) ^ rotr(data, 22)); }
+inline uint32_t sha256::sigma1256(int32 data) { return (rotr(data, 17) ^ rotr(data, 19) ^ shr(data, 10)); }
+inline uint32_t sha256::sigma0256(int32 data) { return (rotr(data, 7) ^ rotr(data, 18) ^ shr(data, 3)); }
+inline uint32_t sha256::ch(int32 a, int32 b, int32 c) { return (a & b) ^ (~a & c); }
+inline uint32_t sha256::maj(int32 a, int32 b, int32 c) { return ((a & b) ^ (a & c) ^ (b & c)); }
+inline void sha256::assignhex(int32& a, int32& b) {
 	std::bitset<32> x(b);
 	int32 y = bin_str_to_int32(x.to_string());
 	a = y;
 }
-sha256_optimized::sha256_optimized(string data) {
+sha256::sha256(string data) {
 	binary_data = "1";
 	int current = data.length() * 8;
 	int x = (448 - 1 - data.length() * 8) % 512;
@@ -123,8 +123,8 @@ sha256_optimized::sha256_optimized(string data) {
 		delete[] m[i];
 	delete[] m;
 }
-sha256_optimized::~sha256_optimized() { }
-inline std::string sha256_optimized::compute(int32** m, int64 current) {
+sha256::~sha256() { }
+inline std::string sha256::compute(int32** m, int64 current) {
 	int32 newhash[8];
 	for (int64 i = 0; i < current; i++) {
 		for (int64 j = 0; j < 8; j++)
@@ -165,4 +165,4 @@ inline std::string sha256_optimized::compute(int32** m, int64 current) {
 	}
 	return final;
 }
-inline std::string sha256_optimized::get_hash() { return result; };
+inline std::string sha256::get_hash() { return result; };

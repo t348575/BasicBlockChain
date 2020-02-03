@@ -1,6 +1,7 @@
 #include <condition_variable>
 #include <future>
 #include "blockchain.h"
+#include <vector>
 #include "json.h"
 #include "sha256.h"
 using namespace std;

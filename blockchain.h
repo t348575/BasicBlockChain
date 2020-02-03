@@ -1,3 +1,4 @@
+#include <vector>
 using namespace std;
 struct Block {
 	int index, difficulty = 0;
