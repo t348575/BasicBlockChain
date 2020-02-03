@@ -17,7 +17,7 @@
    
    ### -index
    Index of the new data in the chain
-    eg:`-index 1`
+    `-index 1`
     
    ### -data
    Data held in the genesis, ie. first block in the chain
