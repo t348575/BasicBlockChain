@@ -2,7 +2,7 @@
 
  A very basic blockchain written in c++
   - Multithreaded 
-  - Entirely written in C++
+  - Entirely written in C++, including self - made sha256
   - Save entire blockchain to file
   
   # Building
