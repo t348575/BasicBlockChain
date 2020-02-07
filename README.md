@@ -15,6 +15,19 @@
    ### -interactive
    Runs the blockchain manager in interactive mode, where all the data is fed manually on request  
    
+   ### -auto
+   Must be used with `-path`. Automatically writes new block's to file (append)
+   
+   ### -verify
+   Must be used with `-path`. Can be used to verify if a chain is proper (POW)
+   
+   ### -path
+   Specifies the path to a file to write block's or chain of data  
+   `-path test.txt`
+   
+   ### -genesis
+   Used to specifify that the first block is the genesis block
+   
    ### -index
    Index of the new data in the chain  
     `-index 1`
