@@ -1,4 +1,4 @@
-#include <stringstream>
+#include <sstream>
 #include <condition_variable>
 #include <future>
 #include "blockchain.h"
@@ -65,7 +65,6 @@ void blockchain::nonce_threaded(int index, string data, string prev_hash, string
 					lock_guard<mutex> guard(inside);
 					found = true;
 					temp.hash = tempx;
-					temp.nonce = temp2.str();
 					temp.nonce = temp2.str();
 					wait_point.notify_one();
 					return;
@@ -136,7 +135,7 @@ stringstream blockchain::dumpChainAsJson() {
 		result["timestamp"] = x.timestamp;
 		result["hash"] = x.hash;
 		result["prevhash"] = x.prev_hash;
-		chainJSON << result.dump(8) << endl;
+		chainJSON << result.dump() << endl;
 	}
 	return chainJSON;
 }
@@ -150,4 +149,16 @@ void blockchain::handleWriteBlock(string data) {
 		replace_chain(new_blockchain);
 		print(new_blockchain);
 	}
+}
+void blockchain::handleGenesisBlock(Block &genesis) {
+	difficulty = genesis.difficulty;
+	chrono::milliseconds ms = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
+	genesis.timestamp = to_string(ms.count());
+	range.push_back(make_pair(0, 4000));
+	nonce_threaded(genesis.index, genesis.data, genesis.prev_hash, genesis.timestamp, 0);
+	genesis.hash = temp.hash;
+	genesis.nonce = temp.nonce;
+}
+Block blockchain::getLastBlock() {
+	return chain[chain.size() - 1];
 }

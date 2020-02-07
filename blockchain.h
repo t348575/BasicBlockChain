@@ -7,11 +7,15 @@ struct Block {
 class blockchain {
 	public:
 		void handleWriteBlock(string data);
+		void handleGenesisBlock(Block& genesis);
 		stringstream dumpChainAsJson();
+		Block getLastBlock();
 		blockchain(Block &genesis) {
 			chain.push_back(genesis);
 			print(chain);
 		}
+		string calculate_bitoin_hash(Block &block, int id);
+		blockchain() { }
 	private: 
 		bool is_ready();
 		vector<Block> chain;
@@ -24,7 +28,6 @@ class blockchain {
 		vector<pair<int, int>> range;
 		string nonce, hash;
 		int current=0;
-		string calculate_bitoin_hash(Block &block, int id);
 		void print(vector<Block> &blockchain);
 		bool starts_with(std::string mainStr, std::string toMatch);
 		bool is_hash_valid(string hash, int difficulty);

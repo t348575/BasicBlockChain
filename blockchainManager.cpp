@@ -8,227 +8,319 @@
 #include "json.h"
 using namespace std;
 using nlohmann::json;
+enum argumentsEnum { _index, _data, _difficulty, _hash, _prevhash, _nonce, _timestamp, _newdata, _interactive, _auto, _verify, _path, _genesis };
+struct flags {
+	bool _interactive = false, _auto = false, _verify = false, _genesis = false;
+} _FLAGS;
 bool is_hex_notation(string const& s) {
 	return s.find_first_not_of("0123456789abcdefABCDEF", 0) == string::npos;
 }
 bool is_argument(string const& s) {
-	vector<string> type{ "-index", "-data", "-difficulty", "-hash", "-prevhash", "-nonce", "-timestamp", "-newdata", "-interactive" };
+	vector<string> type{ "-index", "-data", "-difficulty", "-hash", "-prevhash", "-nonce", "-timestamp", "-newdata", "-interactive", "-auto", "-verify", "-path", "-genesis" };
 	for (auto x : type)
 		if (x == s)
 			return 1;
 	return 0;
 }
+argumentsEnum matchArgument(string const& tempString) {
+	if (tempString == "-index") return _index;
+	if (tempString == "-data") return _data;
+	if (tempString == "-difficulty") return _difficulty;
+	if (tempString == "-hash") return _hash;
+	if (tempString == "-prevhash") return _prevhash;
+	if (tempString == "-nonce") return _nonce;
+	if (tempString == "-timestamp") return _timestamp;
+	if (tempString == "-newdata") return _newdata;
+	if (tempString == "-interactive") return _interactive;
+	if (tempString == "-auto") return _auto;
+	if (tempString == "-verify") return _verify;
+	if (tempString == "-path") return _path;
+	if (tempString == "-genesis") return _genesis;
+}
+void writeBlockToFile(Block lastBlock, string path) {
+	ofstream fout;
+	fout.open(path, ios::app | ios::out);
+	if (fout) {
+		json result;
+		result["index"] = lastBlock.index;
+		result["data"] = lastBlock.data;
+		result["difficulty"] = lastBlock.difficulty;
+		result["nonce"] = lastBlock.nonce;
+		result["timestamp"] = lastBlock.timestamp;
+		result["hash"] = lastBlock.hash;
+		result["prevhash"] = lastBlock.prev_hash;
+		fout << result;
+		fout.close();
+		cout << "Flushed " << sizeof(result.dump()) << " bytes to " << path << endl;
+	}
+}
 int main(int argc, char **argv) {
-	bool is_interactive = false;
 	if (argc > 1) {
 		Block genesis;
-		vector<string> arguments, failed;
-		string data;
-		for (int i = 0; i < argc; i++)
-			arguments.push_back(argv[i]);
-		for (int i = 0; i < arguments.size(); i++) {
-			if (arguments[i] == "-interactive") {
-				is_interactive = true;
-				break;
-			}
-			else if (arguments[i] == "-index") {
-				if (i + 1 < argc) {
-					if (!is_argument(arguments[i + 1])) {
-						stringstream temp3(arguments[i + 1]);
+		vector<string> failed;
+		string data, path;
+		for (int i = 1; i < argc; i+=2) {
+			if (i + 1 < argc) {
+				if (is_argument(argv[i]) && !is_argument(argv[i + 1])) {
+					switch (matchArgument(argv[i])) {
+					case _index: {
+						stringstream temp3(argv[i + 1]);
 						int temp4;
 						temp3 >> temp4;
 						genesis.index = temp4;
 						if (temp4 < 1)
-							failed.push_back("index");
+							failed.push_back(argv[i]);
+						break;
 					}
-					else
-						failed.push_back("index");
-				}
-				else
-					failed.push_back("index");
-			}
-			else if (arguments[i] == "-data") {
-				if (i + 1 < argc) {
-					if (!is_argument(arguments[i + 1])) {
-						if (arguments[i + 1].length() < 1)
-							failed.push_back("data");
+					case _data: {
+						genesis.data = argv[i + 1];
+						break;
+					}
+					case _difficulty: {
+						stringstream temp3(argv[i + 1]);
+						int temp4;
+						temp3 >> temp4;
+						if (temp4 < 0 || temp4 > 64)
+							failed.push_back(argv[i]);
 						else
-							genesis.data = arguments[i + 1];
+							genesis.difficulty = temp4;
+						break;
 					}
-					else
-						failed.push_back("data");
-				}
-				else
-					failed.push_back("data");
-			}
-			else if (arguments[i] == "-difficulty") {
-				if (i + 1 < argc) {
-					if (!is_argument(arguments[i + 1])) {
-						if (arguments[i + 1].length() < 3 && arguments[i + 1].length() > 0) {
-							stringstream temp3(arguments[i + 1]);
-							int temp4;
-							temp3 >> temp4;
-							if (temp4 < 0 || temp4 > 64)
-								failed.push_back("difficulty");
-							else
-								genesis.difficulty = temp4;
-						}
+					case _hash: {
+						if (strlen(argv[i + 1]) != 64)
+							failed.push_back(argv[i]);
 						else
-							failed.push_back("diffiiculty");
+							genesis.hash = argv[i + 1];
+						break;
 					}
-					else
-						failed.push_back("difficulty");
-				}
-				else
-					failed.push_back("difficulty");
-			}
-			else if (arguments[i] == "-hash") {
-				if (i + 1 < argc) {
-					if (!is_argument(arguments[i + 1])) {
-						if (arguments[i + 1].length() != 64)
-							failed.push_back("hash");
+					case _prevhash: {
+						if (strlen(argv[i + 1]) != 64)
+							failed.push_back(argv[i]);
 						else
-							genesis.hash = arguments[i + 1];
+							genesis.prev_hash = argv[i + 1];
+						break;
 					}
-					else
-						failed.push_back("hash");
-				}
-				else
-					failed.push_back("hash");
-			}
-			else if (arguments[i] == "-prevhash") {
-				if (i + 1 < argc) {
-					if (!is_argument(arguments[i + 1])) {
-						if (arguments[i + 1].length() != 64)
-							failed.push_back("prevhash");
+					case _nonce: {
+						if (!is_hex_notation(argv[i + 1]))
+							failed.push_back(argv[i]);
 						else
-							genesis.prev_hash = arguments[i + 1];
+							genesis.nonce = argv[i + 1];
+						break;
 					}
-					else
-						failed.push_back("prevhash");
-				}
-				else
-					failed.push_back("prevhash");
-			}
-			else if (arguments[i] == "-nonce") {
-				if (i + 1 < argc) {
-					if (!is_argument(arguments[i + 1])) {
-						if (!is_hex_notation(arguments[i + 1]))
-							failed.push_back("nonce");
+					case _timestamp: {
+						if (strlen(argv[i + 1]) == 0)
+							failed.push_back(argv[i]);
 						else
-							genesis.nonce = arguments[i + 1];
+							genesis.timestamp = argv[i + 1];
+						break;
 					}
-					else
-						failed.push_back("nonce");
-				}
-				else
-					failed.push_back("nonce");
-			}
-			else if (arguments[i] == "-timestamp") {
-				if (i + 1 < argc) {
-					if (!is_argument(arguments[i + 1])) {
-						if (arguments[i + 1].length() < 0)
-							failed.push_back("timestamp");
-						else {
-							genesis.timestamp = arguments[i + 1];
-						}
-					}
-					else
-						failed.push_back("timestamp");
-				} 
-				else
-					failed.push_back("timestamp");
-			}
-			else if (arguments[i] == "-newdata") {
-				if (i + 1 < argc) {
-					if (!is_argument(arguments[i + 1])) {
-						if (arguments[i + 1].length() > 0)
-							data = arguments[i + 1];
+					case _newdata: {
+						if (strlen(argv[i + 1]) < 0)
+							failed.push_back(argv[i]);
 						else
-							failed.push_back("newdata");
+							data = argv[i + 1];
+						break;
 					}
-					else
-						failed.push_back("newdata");
+					case _path: {
+						if (strlen(argv[i + 1]) > 0)
+							path = argv[i + 1];
+						else
+							failed.push_back(argv[i]);
+						break;
+					}
+					default: {
+						failed.push_back(argv[i]);
+						break;
+					}
+					}
 				}
-				else
-					failed.push_back("newdata");
+				else if (is_argument(argv[i]) && is_argument(argv[i + 1])) {
+					switch (matchArgument(argv[i])) {
+					case _interactive: {
+						_FLAGS._interactive = true;
+						break;
+					}
+					case _auto: {
+						_FLAGS._auto = true;
+						break;
+					}
+					case _verify: {
+						_FLAGS._verify = true;
+						break;
+					}
+					case _genesis: {
+						_FLAGS._genesis = true;
+						break;
+					}
+					default: {
+						failed.push_back(argv[i]);
+						break;
+					}
+					}
+					i--;
+				}
+				else if (!is_argument(argv[i])) {
+					failed.push_back(argv[i]);
+					i--;
+				}
 			}
-		}
-		vector<string> type{ "-index", "-data", "-difficulty", "-hash", "-prevhash", "-nonce", "-timestamp", "-newdata" };
-		for (auto x : arguments) {
-			if (x == "-interactive") {
-				is_interactive = true;
-				failed.clear();
-				goto after;
-			}
-			if (is_argument(x)) {
-				for (int i = 0; i < type.size(); i++) {
-					if (type[i] == x)
-						type.erase(type.begin() + i);
+			else if (i + 1 == argc) {
+				switch (matchArgument(argv[i])) {
+				case _interactive: {
+					_FLAGS._interactive = true;
+					break;
+				}
+				case _auto: {
+					_FLAGS._auto = true;
+					break;
+				}
+				case _verify: {
+					_FLAGS._verify = true;
+					break;
+				}
+				case _genesis: {
+					_FLAGS._genesis = true;
+					break;
+				}
+				default: {
+					failed.push_back(argv[i]);
+					break;
+				}
 				}
 			}
 		}
-		for (auto x : type) {
-			x.erase(remove(x.begin(), x.end(), '-'), x.end());
-			failed.push_back(x);
-		}
-		after:
 		if (failed.size() > 0) {
-			json temp;
-			temp["failed"] = failed;
-			cout << temp.dump(4) << endl;
-			return -1;
+			for (auto& x : failed) {
+				cout << x << endl;
+			}
 		}
 		else {
-			if (is_interactive) {
-				cout << "Do not enter null values!" << endl;
-				cin.get();
-				cout << "Enter index: ";
-				cin >> genesis.index;
-				cout << "Enter data: ";
-				cin >> genesis.data;
-				cout << "Enter newdata: ";
-				cin >> data;
-				cout << "Enter difficulty: ";
-				cin >> genesis.difficulty;
-				cout << "Enter hash: ";
-				cin >> genesis.hash;
-				cout << "Enter prevhash: ";
-				cin >> genesis.prev_hash;
-				cout << "Enter nonce: ";
-				cin >> genesis.nonce;
-				cout << "Enter timestamp: ";
-				cin >> genesis.timestamp;
-			}
-			blockchain obj(genesis);
-			while (true) {
-				auto start = chrono::high_resolution_clock::now();
-				obj.handleWriteBlock(data);
-				auto end = chrono::high_resolution_clock::now();
-				auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
-				cout << endl << "Total time: " << (double)duration.count() / 1000 << endl << endl;
-				do {
-					cout << "exit: exit()\nSave json to file and exit: save_exit()\nEnter next block data : ";
+			if (!(_FLAGS._auto || _FLAGS._verify)) {
+				if (_FLAGS._interactive) {
+					cout << "Do not enter null values!" << endl;
+					cin.get();
+					cout << "Enter index: ";
+					cin >> genesis.index;
+					cout << "Enter data: ";
+					cin >> genesis.data;
+					cout << "Enter newdata: ";
 					cin >> data;
-				} while (data.length() == 0);
-				if (data == "exit()")
-					return 0;
-				if (data == "save_exit()") {
-					string filename;
-					do {
-						cout << "Enter file name: ";
-						cin >> filename;
-					} while (filename.length() == 0);
-					ofstream fout;
-					fout.open(filename);
-					if (fout) {
-						fout << obj.dumpChainAsJson().rdbuf();
-						fout.close();
-						return 0;
+					cout << "Enter difficulty: ";
+					cin >> genesis.difficulty;
+					cout << "Enter prevhash: ";
+					cin >> genesis.prev_hash;
+					if (!_FLAGS._genesis) {
+						cout << "Enter nonce: ";
+						cin >> genesis.nonce;
+						cout << "Enter timestamp: ";
+						cin >> genesis.timestamp;
+						cout << "Enter hash: ";
+						cin >> genesis.hash;
 					}
-					return -1;
+				}
+				if (_FLAGS._genesis) {
+					blockchain tempObj;
+					tempObj.handleGenesisBlock(genesis);
+				}
+				blockchain obj(genesis);
+				while (true) {
+					auto start = chrono::high_resolution_clock::now();
+					obj.handleWriteBlock(data);
+					auto end = chrono::high_resolution_clock::now();
+					auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
+					cout << endl << "Total time: " << (double)duration.count() / 1000 << endl << endl;
+					do {
+						cout << "exit: exit()\nSave json to file and exit: save_exit()\nEnter next block data : ";
+						cin >> data;
+					} while (data.length() == 0);
+					if (data == "exit()")
+						return 0;
+					if (data == "save_exit()") {
+						string filename;
+						do {
+							cout << "Enter file name: ";
+							cin >> filename;
+						} while (filename.length() == 0);
+						ofstream fout;
+						fout.open(filename);
+						if (fout) {
+							fout << obj.dumpChainAsJson().rdbuf();
+							fout.close();
+							return 0;
+						}
+						return -1;
+					}
 				}
 			}
+			else if (path.length() != 0) {
+				if (_FLAGS._auto) {
+					if (_FLAGS._genesis) {
+						blockchain tempObj;
+						tempObj.handleGenesisBlock(genesis);
+					}
+					blockchain obj(genesis);
+					writeBlockToFile(obj.getLastBlock(), path);
+					while (true) {
+						auto start = chrono::high_resolution_clock::now();
+						obj.handleWriteBlock(data);
+						auto end = chrono::high_resolution_clock::now();
+						auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
+						writeBlockToFile(obj.getLastBlock(), path);
+						cout << endl << "Total time: " << (double)duration.count() / 1000 << endl << endl;
+						do {
+							cout << "exit: exit()\nEnter next block data : ";
+							cin >> data;
+						} while (data.length() == 0);
+						if (data == "exit()")
+							return 0;
+					}
+				}
+				else if (_FLAGS._verify) {
+					blockchain obj;
+					json result;
+					ifstream fin;
+					Block currentTestBlock, previousTestBlock;
+					int pos = 0;
+					failed.clear();
+					fin.open(path, ios::in | ios::binary);
+					if (fin) {
+						while (!fin.eof()) {
+							try {
+								fin >> result;
+								if (pos != 0)
+									previousTestBlock = currentTestBlock;
+								currentTestBlock.data = result["data"].get<string>();
+								currentTestBlock.difficulty = result["difficulty"].get<int>();
+								currentTestBlock.hash = result["hash"].get<string>();
+								currentTestBlock.index = result["index"].get<int>();
+								currentTestBlock.nonce = result["nonce"].get<string>();
+								currentTestBlock.prev_hash = result["prevhash"].get<string>();
+								currentTestBlock.timestamp = result["timestamp"].get<string>();
+								if (pos == 0 && obj.calculate_bitoin_hash(currentTestBlock, pos) != currentTestBlock.hash) {
+									failed.push_back(to_string(pos));
+									break;
+								}
+								else if (previousTestBlock.hash != currentTestBlock.prev_hash && obj.calculate_bitoin_hash(currentTestBlock, pos) != currentTestBlock.hash) {
+									failed.push_back(to_string(pos));
+									break;
+								}
+								pos++;
+							}
+							catch (json::parse_error t) {}
+						}
+						fin.close();
+						if (failed.size() == 1)
+							cout << "Failed at: " << failed[0] << endl;
+						else
+							cout << "Verified!" << endl;
+					}
+					else {
+						cout << "Can't open file!" << endl;
+					}
+				}
+			}
+			else
+				cout << "Path not set!" << endl;
 		}
 	}
 	else
