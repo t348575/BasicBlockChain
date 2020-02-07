@@ -1,6 +1,6 @@
 # BasicBlockChain
 
- A very basic blockchain written in c++
+ A very basic blockchain library written in c++
   - Multithreaded 
   - Entirely written in C++, including self - made sha256
   - Save entire blockchain to file
