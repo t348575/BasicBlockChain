@@ -8,15 +8,15 @@
 #include "json.h"
 using namespace std;
 using nlohmann::json;
-enum argumentsEnum { _index, _data, _difficulty, _hash, _prevhash, _nonce, _timestamp, _newdata, _interactive, _auto, _verify, _path, _genesis };
+enum argumentsEnum { _index, _data, _difficulty, _hash, _prevhash, _nonce, _timestamp, _newdata, _interactive, _auto, _verify, _path, _genesis, _addblock, _min };
 struct flags {
-	bool _interactive = false, _auto = false, _verify = false, _genesis = false;
+	bool _interactive = false, _auto = false, _verify = false, _genesis = false, _addblock = false, _min = false;
 } _FLAGS;
 bool is_hex_notation(string const& s) {
 	return s.find_first_not_of("0123456789abcdefABCDEF", 0) == string::npos;
 }
 bool is_argument(string const& s) {
-	vector<string> type{ "-index", "-data", "-difficulty", "-hash", "-prevhash", "-nonce", "-timestamp", "-newdata", "-interactive", "-auto", "-verify", "-path", "-genesis" };
+	vector<string> type{ "-index", "-data", "-difficulty", "-hash", "-prevhash", "-nonce", "-timestamp", "-newdata", "-interactive", "-auto", "-verify", "-path", "-genesis", "-addblock", "-min" };
 	for (auto x : type)
 		if (x == s)
 			return 1;
@@ -36,8 +36,14 @@ argumentsEnum matchArgument(string const& tempString) {
 	if (tempString == "-verify") return _verify;
 	if (tempString == "-path") return _path;
 	if (tempString == "-genesis") return _genesis;
+	if (tempString == "-addblock") return _addblock;
+	if (tempString == "-min") return _min;
 }
 void writeBlockToFile(Block lastBlock, string path) {
+	bool exists = false;
+	ifstream fin(path, ios::in);
+	if (fin)
+		exists = true;
 	ofstream fout;
 	fout.open(path, ios::app | ios::out);
 	if (fout) {
@@ -49,9 +55,12 @@ void writeBlockToFile(Block lastBlock, string path) {
 		result["timestamp"] = lastBlock.timestamp;
 		result["hash"] = lastBlock.hash;
 		result["prevhash"] = lastBlock.prev_hash;
+		if (exists)
+			fout << endl;
 		fout << result;
 		fout.close();
-		cout << "Flushed " << sizeof(result.dump()) << " bytes to " << path << endl;
+		if (!_FLAGS._min)
+			cout << "Flushed " << sizeof(result.dump()) << " bytes to " << path << endl;
 	}
 }
 int main(int argc, char **argv) {
@@ -152,6 +161,14 @@ int main(int argc, char **argv) {
 						_FLAGS._genesis = true;
 						break;
 					}
+					case _addblock: {
+						_FLAGS._addblock = true;
+						break;
+					}
+					case _min: {
+						_FLAGS._min = true;
+						break;
+					}
 					default: {
 						failed.push_back(argv[i]);
 						break;
@@ -182,6 +199,14 @@ int main(int argc, char **argv) {
 					_FLAGS._genesis = true;
 					break;
 				}
+				case _addblock: {
+					_FLAGS._addblock = true;
+					break;
+				}
+				case _min: {
+					_FLAGS._min = true;
+					break;
+				}
 				default: {
 					failed.push_back(argv[i]);
 					break;
@@ -190,13 +215,13 @@ int main(int argc, char **argv) {
 			}
 		}
 		if (failed.size() > 0) {
-			for (auto& x : failed) {
-				cout << x << endl;
-			}
+			if (!_FLAGS._min)
+				for (auto& x : failed)
+					cout << x << endl;
 		}
 		else {
-			if (!(_FLAGS._auto || _FLAGS._verify)) {
-				if (_FLAGS._interactive) {
+			if (!(_FLAGS._auto || _FLAGS._verify || _FLAGS._addblock)) {
+				if (_FLAGS._interactive && !_FLAGS._min) {
 					cout << "Do not enter null values!" << endl;
 					cin.get();
 					cout << "Enter index: ";
@@ -218,19 +243,22 @@ int main(int argc, char **argv) {
 						cin >> genesis.hash;
 					}
 				}
-				if (_FLAGS._genesis) {
-					blockchain tempObj;
-					tempObj.handleGenesisBlock(genesis);
-				}
-				blockchain obj(genesis);
+				blockchain obj;
+				if (_FLAGS._min)
+					obj.setPrintMode(1);
+				if (_FLAGS._genesis)
+					obj.handleGenesisBlock(genesis);
+				obj.addBlock(genesis);
 				while (true) {
 					auto start = chrono::high_resolution_clock::now();
 					obj.handleWriteBlock(data);
 					auto end = chrono::high_resolution_clock::now();
 					auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
-					cout << endl << "Total time: " << (double)duration.count() / 1000 << endl << endl;
+					if (!_FLAGS._min)
+						cout << endl << "Total time: " << (double)duration.count() / 1000 << endl << endl;
 					do {
-						cout << "exit: exit()\nSave json to file and exit: save_exit()\nEnter next block data : ";
+						if (!_FLAGS._min)
+							cout << "exit: exit()\nSave json to file and exit: save_exit()\nEnter next block data : ";
 						cin >> data;
 					} while (data.length() == 0);
 					if (data == "exit()")
@@ -238,13 +266,16 @@ int main(int argc, char **argv) {
 					if (data == "save_exit()") {
 						string filename;
 						do {
-							cout << "Enter file name: ";
+							if (!_FLAGS._min)
+								cout << "Enter file name: ";
 							cin >> filename;
 						} while (filename.length() == 0);
 						ofstream fout;
-						fout.open(filename);
+						fout.open(filename, ios::trunc);
 						if (fout) {
-							fout << obj.dumpChainAsJson().rdbuf();
+							string chain = obj.dumpChainAsJson().str();
+							chain.pop_back();
+							fout << chain;
 							fout.close();
 							return 0;
 						}
@@ -253,12 +284,51 @@ int main(int argc, char **argv) {
 				}
 			}
 			else if (path.length() != 0) {
-				if (_FLAGS._auto) {
-					if (_FLAGS._genesis) {
-						blockchain tempObj;
-						tempObj.handleGenesisBlock(genesis);
+				if (_FLAGS._addblock && data.length() != 0) {
+					Block genesisFromPast;
+					ifstream fin(path, ios::in);
+					json result;
+					char temp = 'a';
+					if (fin) {
+						fin.seekg(0, ios::end);
+						int a = 0;
+						while (temp != '{') {
+							fin.seekg(-2, ios::cur);
+							fin >> temp;
+						}
+						fin.seekg(-2, ios::cur);
+						try {
+							fin >> result;
+						}
+						catch (json::parse_error t) {}
+						genesisFromPast.data = result["data"].get<string>();
+						genesisFromPast.difficulty = result["difficulty"].get<int>();
+						genesisFromPast.hash = result["hash"].get<string>();
+						genesisFromPast.index = result["index"].get<int>();
+						genesisFromPast.nonce = result["nonce"].get<string>();
+						genesisFromPast.prev_hash = result["prevhash"].get<string>();
+						genesisFromPast.timestamp = result["timestamp"].get<string>();
+						blockchain obj;
+						if (_FLAGS._min)
+							obj.setPrintMode(1);
+						obj.handleGenesisBlock(genesisFromPast);
+						obj.addBlock(genesisFromPast);
+						auto start = chrono::high_resolution_clock::now();
+						obj.handleWriteBlock(data);
+						auto end = chrono::high_resolution_clock::now();
+						auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
+						writeBlockToFile(obj.getLastBlock(), path);
+						if (!_FLAGS._min)
+							cout << endl << "Total time: " << (double)duration.count() / 1000 << endl << endl;
 					}
-					blockchain obj(genesis);
+				}
+				else if (_FLAGS._auto) {
+					blockchain obj;
+					if (_FLAGS._min)
+						obj.setPrintMode(1);
+					if (_FLAGS._genesis) 
+						obj.handleGenesisBlock(genesis);
+					obj.addBlock(genesis);
 					writeBlockToFile(obj.getLastBlock(), path);
 					while (true) {
 						auto start = chrono::high_resolution_clock::now();
@@ -266,9 +336,11 @@ int main(int argc, char **argv) {
 						auto end = chrono::high_resolution_clock::now();
 						auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
 						writeBlockToFile(obj.getLastBlock(), path);
-						cout << endl << "Total time: " << (double)duration.count() / 1000 << endl << endl;
+						if (!_FLAGS._min)
+							cout << endl << "Total time: " << (double)duration.count() / 1000 << endl << endl;
 						do {
-							cout << "exit: exit()\nEnter next block data : ";
+							if (!_FLAGS._min)
+								cout << "exit: exit()\nEnter next block data : ";
 							cin >> data;
 						} while (data.length() == 0);
 						if (data == "exit()")
@@ -282,7 +354,7 @@ int main(int argc, char **argv) {
 					Block currentTestBlock, previousTestBlock;
 					int pos = 0;
 					failed.clear();
-					fin.open(path, ios::in | ios::binary);
+					fin.open(path, ios::in);
 					if (fin) {
 						while (!fin.eof()) {
 							try {

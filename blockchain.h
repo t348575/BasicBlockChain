@@ -14,9 +14,14 @@ class blockchain {
 			chain.push_back(genesis);
 			print(chain);
 		}
+		void addBlock(Block& currBlock);
 		string calculate_bitoin_hash(Block &block, int id);
 		blockchain() { }
+		void setPrintMode(int mode) {
+			this->printMode = mode;
+		}
 	private: 
+		int printMode = 0;
 		bool is_ready();
 		vector<Block> chain;
 		Block temp;

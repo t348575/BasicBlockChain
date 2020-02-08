@@ -8,6 +8,11 @@
 using namespace std;
 using nlohmann::json;
 condition_variable wait_point;
+void blockchain::addBlock(Block& currBlock) {
+	chain.push_back(currBlock);
+	if(printMode == 0)
+		print(chain);
+}
 string blockchain::calculate_bitoin_hash(Block &block, int id) {
 	string hash_hex_str_0, hash_hex_str_1, src_str = to_string(block.index) + block.timestamp + block.data + block.prev_hash + block.nonce;
 	sha256 obj(src_str);
@@ -139,17 +144,6 @@ stringstream blockchain::dumpChainAsJson() {
 	}
 	return chainJSON;
 }
-void blockchain::handleWriteBlock(string data) {
-	difficulty = chain[chain.size() - 1].difficulty;
-	range.clear();
-	Block new_block = generate_block(chain[chain.size() - 1], data);
-	if (is_block_valid(new_block, chain[chain.size() - 1])) {
-		vector<Block> new_blockchain(chain);
-		new_blockchain.push_back(new_block);
-		replace_chain(new_blockchain);
-		print(new_blockchain);
-	}
-}
 void blockchain::handleGenesisBlock(Block &genesis) {
 	difficulty = genesis.difficulty;
 	chrono::milliseconds ms = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
@@ -158,6 +152,18 @@ void blockchain::handleGenesisBlock(Block &genesis) {
 	nonce_threaded(genesis.index, genesis.data, genesis.prev_hash, genesis.timestamp, 0);
 	genesis.hash = temp.hash;
 	genesis.nonce = temp.nonce;
+}
+void blockchain::handleWriteBlock(string data) {
+	difficulty = chain[chain.size() - 1].difficulty;
+	range.clear();
+	Block new_block = generate_block(chain[chain.size() - 1], data);
+	//print(chain);
+	if (is_block_valid(new_block, chain[chain.size() - 1])) {
+		vector<Block> new_blockchain(chain);
+		new_blockchain.push_back(new_block);
+		replace_chain(new_blockchain);
+		print(new_blockchain);
+	}
 }
 Block blockchain::getLastBlock() {
 	return chain[chain.size() - 1];

@@ -25,6 +25,14 @@
    Specifies the path to a file to write block's or chain of data  
    `-path test.txt`
    
+   ### -addblock
+   Used to add a block to an existing chain retrieved from a file. Used alongside `-newdata` and `-path`  
+   `-addblock`
+
+   ### -min
+   To leaving stdout printing to essential minimal items  
+   `-min`
+
    ### -genesis
    Used to specifify that the first block is the genesis block
    
