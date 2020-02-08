@@ -8,15 +8,15 @@
 #include "json.h"
 using namespace std;
 using nlohmann::json;
-enum argumentsEnum { _index, _data, _difficulty, _hash, _prevhash, _nonce, _timestamp, _newdata, _interactive, _auto, _verify, _path, _genesis, _addblock, _min };
+enum argumentsEnum { _index, _data, _difficulty, _hash, _prevhash, _nonce, _timestamp, _newdata, _interactive, _auto, _verify, _path, _genesis, _addblock, _min, _onlygenesis };
 struct flags {
-	bool _interactive = false, _auto = false, _verify = false, _genesis = false, _addblock = false, _min = false;
+	bool _interactive = false, _auto = false, _verify = false, _genesis = false, _addblock = false, _min = false, _onlygenesis = false;
 } _FLAGS;
 bool is_hex_notation(string const& s) {
 	return s.find_first_not_of("0123456789abcdefABCDEF", 0) == string::npos;
 }
 bool is_argument(string const& s) {
-	vector<string> type{ "-index", "-data", "-difficulty", "-hash", "-prevhash", "-nonce", "-timestamp", "-newdata", "-interactive", "-auto", "-verify", "-path", "-genesis", "-addblock", "-min" };
+	vector<string> type{ "-index", "-data", "-difficulty", "-hash", "-prevhash", "-nonce", "-timestamp", "-newdata", "-interactive", "-auto", "-verify", "-path", "-genesis", "-addblock", "-min", "-onlygenesis" };
 	for (auto x : type)
 		if (x == s)
 			return 1;
@@ -38,6 +38,7 @@ argumentsEnum matchArgument(string const& tempString) {
 	if (tempString == "-genesis") return _genesis;
 	if (tempString == "-addblock") return _addblock;
 	if (tempString == "-min") return _min;
+	if (tempString == "-onlygenesis") return _onlygenesis;
 }
 void writeBlockToFile(Block lastBlock, string path) {
 	bool exists = false;
@@ -169,6 +170,10 @@ int main(int argc, char **argv) {
 						_FLAGS._min = true;
 						break;
 					}
+					case _onlygenesis: {
+						_FLAGS._onlygenesis = true;
+						break;
+					}
 					default: {
 						failed.push_back(argv[i]);
 						break;
@@ -205,6 +210,10 @@ int main(int argc, char **argv) {
 				}
 				case _min: {
 					_FLAGS._min = true;
+					break;
+				}
+				case _onlygenesis: {
+					_FLAGS._onlygenesis = true;
 					break;
 				}
 				default: {
@@ -249,6 +258,19 @@ int main(int argc, char **argv) {
 				if (_FLAGS._genesis)
 					obj.handleGenesisBlock(genesis);
 				obj.addBlock(genesis);
+				if (_FLAGS._onlygenesis) {
+					Block genesisBlock = obj.getLastBlock();
+					json result;
+					result["index"] = genesisBlock.index;
+					result["data"] = genesisBlock.data;
+					result["difficulty"] = genesisBlock.difficulty;
+					result["nonce"] = genesisBlock.nonce;
+					result["timestamp"] = genesisBlock.timestamp;
+					result["hash"] = genesisBlock.hash;
+					result["prevhash"] = genesisBlock.prev_hash;
+					cout << result.dump(8) << endl;
+					return 0;
+				}
 				while (true) {
 					auto start = chrono::high_resolution_clock::now();
 					obj.handleWriteBlock(data);

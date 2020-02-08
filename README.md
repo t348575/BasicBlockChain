@@ -36,6 +36,10 @@
    ### -genesis
    Used to specifify that the first block is the genesis block
    
+   ### -onlygenesis
+   Generate genesis block and exit  
+   `-onlygenesis`
+
    ### -index
    Index of the new data in the chain  
     `-index 1`
