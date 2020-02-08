@@ -268,7 +268,10 @@ int main(int argc, char **argv) {
 					result["timestamp"] = genesisBlock.timestamp;
 					result["hash"] = genesisBlock.hash;
 					result["prevhash"] = genesisBlock.prev_hash;
-					cout << result.dump(8) << endl;
+					if(_FLAGS._min)
+						cout << result.dump() << endl;
+					else
+						cout << result.dump(8) << endl;
 					return 0;
 				}
 				while (true) {
