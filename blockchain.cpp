@@ -106,6 +106,8 @@ Block blockchain::generate_block(Block old_block, string data) {
 	range.push_back(make_pair(0, 4000));
 	threads.emplace_back(async(&blockchain::nonce_threaded, this, new_block.index, data, new_block.prev_hash, new_block.timestamp, 0));
 	unsigned int conc = thread::hardware_concurrency() - 1;
+	if(difficulty < 3)
+		conc = 1;
 	for (unsigned int x = 1; x < conc; x++) {
 		range.push_back(make_pair(range[x - 1].first + 4000, range[x - 1].second + 4000));
 		threads.emplace_back(async(&blockchain::nonce_threaded, this, new_block.index, data, new_block.prev_hash, new_block.timestamp, x));
@@ -126,7 +128,7 @@ void blockchain::print(vector<Block> &blockchain) {
 	result["timestamp"] = blockchain[blockchain.size() - 1].timestamp;
 	result["hash"] = blockchain[blockchain.size() - 1].hash;
 	result["prevhash"] = blockchain[blockchain.size() - 1].prev_hash;
-	cout << result.dump(8) << endl;
+	cout << result.dump() << endl;
 
 }
 stringstream blockchain::dumpChainAsJson() {

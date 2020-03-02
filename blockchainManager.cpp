@@ -311,12 +311,11 @@ int main(int argc, char **argv) {
 			else if (path.length() != 0) {
 				if (_FLAGS._addblock && data.length() != 0) {
 					Block genesisFromPast;
-					ifstream fin(path, ios::in);
 					json result;
+					ifstream fin(path, ios::in);
 					char temp = 'a';
-					if (fin) {
+					if (fin.good()) {
 						fin.seekg(0, ios::end);
-						int a = 0;
 						while (temp != '{') {
 							fin.seekg(-2, ios::cur);
 							fin >> temp;
@@ -326,6 +325,20 @@ int main(int argc, char **argv) {
 							fin >> result;
 						}
 						catch (json::parse_error t) {}
+						blockchain obj;
+						if (_FLAGS._min)
+							obj.setPrintMode(1);
+						obj.addBlock(genesisFromPast);
+						auto start = chrono::high_resolution_clock::now();
+						obj.handleWriteBlock(data);
+						auto end = chrono::high_resolution_clock::now();
+						auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
+						writeBlockToFile(obj.getLastBlock(), path);
+						if (!_FLAGS._min)
+							cout << endl << "Total time: " << (double)duration.count() / 1000 << endl << endl;
+					}
+					else if (path == "cin") {
+						cin >> result;
 						genesisFromPast.data = result["data"].get<string>();
 						genesisFromPast.difficulty = result["difficulty"].get<int>();
 						genesisFromPast.hash = result["hash"].get<string>();
@@ -336,16 +349,16 @@ int main(int argc, char **argv) {
 						blockchain obj;
 						if (_FLAGS._min)
 							obj.setPrintMode(1);
-						obj.handleGenesisBlock(genesisFromPast);
 						obj.addBlock(genesisFromPast);
 						auto start = chrono::high_resolution_clock::now();
 						obj.handleWriteBlock(data);
 						auto end = chrono::high_resolution_clock::now();
 						auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
-						writeBlockToFile(obj.getLastBlock(), path);
 						if (!_FLAGS._min)
 							cout << endl << "Total time: " << (double)duration.count() / 1000 << endl << endl;
 					}
+					else
+						cout << "Improper path!" << endl;
 				}
 				else if (_FLAGS._auto) {
 					blockchain obj;
