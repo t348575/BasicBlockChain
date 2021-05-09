@@ -1,4 +1,5 @@
 # BasicBlockChain
+![Visits](https://nkvnu62257.execute-api.ap-south-1.amazonaws.com/production?repo=BasicBlockChain)
 
  A very basic blockchain library written in c++
   - Multithreaded 
